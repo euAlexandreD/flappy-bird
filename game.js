@@ -115,11 +115,17 @@ window.addEventListener("keydown", () => {
 
 const startGame = () => {
   requestAnimationFrame(update);
+  setInterval(placePipes, 1500);
   window.addEventListener("keydown", moveBird);
 };
 
 const update = () => {
   requestAnimationFrame(update);
+
+  if (gameOver) {
+    return;
+  }
+
   context.clearRect(0, 0, board.width, board.height);
 
   //bird
@@ -140,6 +146,34 @@ const update = () => {
     gameOver = true;
   }
 
+  //pipe
+
+  for (let i = 0; i < pipeArray.length; i++) {
+    let pipe = pipeArray[i];
+
+    pipe.x += velocityX;
+    context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+
+    if (!pipe.passed && bird.x > pipe.x + pipe.width) {
+      score += 0.5;
+      pipe.passed = true;
+      pointSound.play();
+    }
+
+    if (detectColision(bird, pipe)) {
+      gameOver = true;
+    }
+  }
+  //clear pipe
+
+  while (pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
+    pipeArray.shift();
+  }
+
+  // score
+
+  drawScore(score);
+
   if (gameOver) {
     hitSound.play();
     context.drawImage(
@@ -150,13 +184,69 @@ const update = () => {
   }
 };
 
-const placePipes = () => {};
+const placePipes = () => {
+  if (gameOver) {
+    return;
+  }
+
+  let randomPipeY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
+  let openingSpace = board.height / 4;
+
+  let topPipe = {
+    img: topPipeImg,
+    x: pipeX,
+    y: randomPipeY,
+    width: pipeWidth,
+    height: pipeHeight,
+    passed: false,
+  };
+
+  pipeArray.push(topPipe);
+
+  let bottonPipe = {
+    img: bottonPipeImg,
+    x: pipeX,
+    y: randomPipeY + pipeHeight + openingSpace,
+    width: pipeWidth,
+    height: pipeHeight,
+    passed: false,
+  };
+
+  pipeArray.push(bottonPipe);
+};
 
 const moveBird = () => {
   velocityY = -6;
+  if (gameOver) {
+    bird.y = birdY;
+    pipeArray = [];
+    score = 0;
+    gameOver = false;
+  }
   wingSound.play();
 };
 
-const detectColision = () => {};
+const detectColision = (a, b) => {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+};
 
-const drawScore = () => {};
+const drawScore = (score) => {
+  let scoreStr = score.toString();
+  let digitWidth = scoreImg[0].width;
+  let digitHeight = scoreImg[0].height;
+  let totalWidth = digitWidth * scoreStr.length;
+
+  let startX = (boardWidth - totalWidth) / 2;
+
+  for (let i = 0; i < scoreStr.length; i++) {
+    let digit = parseInt(scoreStr[i]);
+    let x = startX + i * digitWidth;
+    let y = 140;
+    context.drawImage(scoreImg[digit], x, y, digitWidth, digitHeight);
+  }
+};
